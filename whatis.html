@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>What Is?</title>
+  <style>
+    body {
+      background-color: black;
+      color: white;
+      font-family: "Arial Black", sans-serif;
+      text-align: center;
+    }
+    h1, h2, h3 {
+      color: green;
+      font-weight: bold;
+    }
+    #imageContainer img {
+      max-width: 1000px;
+      height: auto;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>What Is?</h1>
+  <form onsubmit="displaySummary(); return false;">
+    <input type="text" id="inputField">
+    <button type="submit">What Is?</button>
+</form>
+<br>
+<p id="summary"></p>
+<div id="imageContainer"></div>
+<script>
+  function displaySummary() {
+    document.getElementById("imageContainer").innerHTML = "";
+    var topic = document.getElementById("inputField").value;
+    var url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + topic;
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        var summary = data.extract;
+        summary = summary.split(". ");
+        summary = summary.slice(0, summary.length * 2).join(". ");
+        document.getElementById("summary").innerHTML = summary;
+        var images = data.image;
+        if (!images && data.originalimage) {
+          images = [data.originalimage];
+        }
+        if (images) {
+          images.forEach(image => {
+            var imageContainer = document.createElement("div");
+            imageContainer.classList.add("imageContainer");
+            var imageElement = document.createElement("img");
+            imageElement.src = image.source;
+            imageContainer.appendChild(imageElement);
+            document.getElementById("imageContainer").appendChild(imageContainer);
+          });          }
+        })
+        .catch(error => console.error(error));
+    }
+  </script>
+</body>
+</html>
