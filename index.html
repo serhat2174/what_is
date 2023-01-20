@@ -23,40 +23,99 @@
 <body>
   <h1>What Is?</h1>
   <form onsubmit="displaySummary(); return false;">
-    <input type="text" id="inputField">
+    <input type="text" id="inputField" onkeyup="clearInput(event)">
     <button type="submit">What Is?</button>
 </form>
 <br>
 <p id="summary"></p>
 <div id="imageContainer"></div>
 <script>
+  function clearInput(event) {
+  if (event.keyCode === 13) {
+    document.getElementById("inputField").value = "";
+  }
+}
   function displaySummary() {
     document.getElementById("imageContainer").innerHTML = "";
     var topic = document.getElementById("inputField").value;
-    var url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + topic;
+    var encodedTopic = encodeURI(topic);
+    var url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + encodedTopic;
     fetch(url)
-      .then(response => response.json())
-      .then(data => {
-        var summary = data.extract;
-        summary = summary.split(". ");
-        summary = summary.slice(0, summary.length * 2).join(". ");
-        document.getElementById("summary").innerHTML = summary;
-        var images = data.image;
-        if (!images && data.originalimage) {
-          images = [data.originalimage];
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        } else {
+          throw new Error("No Wikipedia page found for: " + topic);
         }
-        if (images) {
-          images.forEach(image => {
-            var imageContainer = document.createElement("div");
-            imageContainer.classList.add("imageContainer");
-            var imageElement = document.createElement("img");
-            imageElement.src = image.source;
-            imageContainer.appendChild(imageElement);
-            document.getElementById("imageContainer").appendChild(imageContainer);
-          });          }
-        })
-        .catch(error => console.error(error));
-    }
+      })
+      .then(data => {
+        if (data.extract.includes("may refer to")) {
+          document.getElementById("summary").innerHTML = "The input is ambiguous, please specify which page you are looking for.";
+        } else {
+          var summary = data.extract;
+          summary = summary.split(". ");
+          summary = summary.slice(0, summary.length * 2).join(". ");
+          document.getElementById("summary").innerHTML = summary;
+          var images = data.image;
+          if (!images && data.originalimage) {
+            images = [data.originalimage];
+          }
+          if (images) {
+            images.forEach(image => {
+              var imageContainer = document.createElement("div");
+              imageContainer.classList.add("imageContainer");
+              var imageElement = document.createElement("img");
+              imageElement.src = image.source;
+              imageContainer.appendChild(imageElement);
+              document.getElementById("imageContainer").appendChild(imageContainer);
+            });
+          }
+        }
+      })
+      .catch(error => {
+        // Try searching with the first letter of each word capitalized
+        var capitalizedTopic = topic.toLowerCase().replace(/\b[a-z]/g, function(letter) {
+          return letter.toUpperCase();
+        });
+        var encodedCapitalizedTopic = encodeURI(capitalizedTopic);
+        var capitalizedUrl = "https://en.wikipedia.org/api/rest_v1/page/summary/" + encodedCapitalizedTopic;
+        fetch(capitalizedUrl)
+          .then(response => {
+            if (response.ok) {
+              return response.json();
+            } else {
+              throw new Error("No Wikipedia page found for: " + capitalizedTopic);
+            }
+          })
+          .then(data => {
+            if (data.extract.includes("may refer to")) {
+              document.getElementById("summary").innerHTML = "The input is ambiguous, please specify which page you are looking for.";
+            } else {
+              var summary = data.extract;
+              summary = summary.split(". ");
+              summary = summary.slice(0, summary.length * 2).join(". ");
+              document.getElementById("summary").innerHTML = summary;
+              var images = data.image;
+              if (!images && data.originalimage) {
+                images = [data.originalimage];
+              }
+              if (images) {
+                images.forEach(image => {
+                  var imageContainer = document.createElement("div");
+                  imageContainer.classList.add("imageContainer");
+                  var imageElement = document.createElement("img");
+                  imageElement.src = image.source;
+                  imageContainer.appendChild(imageElement);
+                  document.getElementById("imageContainer").appendChild(imageContainer);
+                });
+              }
+            }
+          })
+          .catch(error => {
+            document.getElementById("summary").innerHTML = error.message;
+          });
+      });
+  }
   </script>
 </body>
 </html>
